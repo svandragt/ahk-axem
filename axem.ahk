@@ -3,6 +3,10 @@
 ;
 ; scrollable gui code by Lexikos
 ; http://www.autohotkey.com/forum/viewtopic.php?p=177673#177673
+;
+; todo:
+; * mousewheel scrolling
+; * remember window sizes?
 
 #NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
 DetectHiddenWindows On  ; Allows a script's hidden main window to be detected.	
