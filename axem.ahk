@@ -1,4 +1,4 @@
-; Axe'm (AutoHotkey Script Manager -AHKSM)
+; Axem (AutoHotkey Script Manager -AHKSM)
 ; Language:       English
 ;
 #NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
@@ -8,18 +8,6 @@ SendMode Input  ; Recommended for new scripts due to its superior speed and reli
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
 functions()
-;winget,ls,list,AutoHotkey ahk_class AutoHotkey
-;Loop,%ls%
-;Msgbox % Regexreplace(Wingettitle("ahk_id " ls%a_index%),".*\\(.*)-.*","$1")
-
-GetValue(var,index)
-{
-	Loop, parse, var, `n
-	{
-		If A_Index = %index%
-			return %A_LoopField%
-	}
-}
 
 IgnoreSelf = 0
 IniFile = settings.ini
@@ -31,13 +19,14 @@ Else
 ScanFolder =
 LongFileList =
 FileList = 
+RunningScripts = 
 
 
 Menu, tray, NoStandard
-Menu, tray, Add, Show Axe'm,ButtonRescan
+Menu, tray, Add, Show Axem,ButtonRescan
 Menu, tray, Add,
 Menu, tray, Standard
-Menu, tray, Default, Show Axe'm
+Menu, tray, Default, Show Axem
 Gosub,READINI
 GoSub, ShowWindow
 GoSub, Wait
@@ -47,8 +36,11 @@ GoSub, Wait
 ShowWindow:
 	Gui Destroy
 	Gui, Add, Text,, Script found in %ScanFolder%:
+	winget,ls,list,AutoHotkey ahk_class AutoHotkey
+
 	Loop, %ScanFolder%\*.ahk, , 1  ; Recurse into subfolders.
 	{
+		Counter := A_Index
 		LongFileList = %LongFileList%%A_LoopFileLongPath%`n
 	  FileList = %FileList%%A_LoopFileName%`n
 		If IgnoreSelf 
@@ -56,14 +48,25 @@ ShowWindow:
 				continue
 		FolderLen := StrLen(ScanFolder)+2
 		EntryTitle := SubStr(A_LoopFileLongPath, FolderLen)
-	
+
 		Gui, Add, Button, Section xs gEditFile vEditFile%A_Index%, Edit
-	  Gui, Add, Checkbox, ys hp vCheckbox%A_Index% gStartStopScript, %EntryTitle%
+		
+		DisplayCheckbox = 
+		Loop,%ls%
+		{
+			RunningScript := Regexreplace(Wingettitle("ahk_id " ls%a_index%),".*\\(.*)-.*","$1")
+			StringTrimRight, RunningScript, RunningScript, 1
+			File := GetValue(FileList,Counter)
+			If File = %RunningScript%
+				DisplayCheckbox = Checked
+		}
+		Gui, Add, Checkbox, ys hp %DisplayCheckbox% vCheckbox%A_Index% gStartStopScript, %EntryTitle%
+
 	 }
 	 Gui, Add, Button, Section xs, &Rescan
 	 Gui, Add, Button, ys, &Change Folder
 	 Gui, Add, Button, ys Default, &Hide
-	Gui, Show,,Axe'm - AutoHotKey Scripts Manager
+	Gui, Show,,Axem - AutoHotKey Scripts Manager
 return
 
 
@@ -101,10 +104,11 @@ ButtonChangeFolder:
 return
 
 ButtonRescan:
-	ScanFolder =
+ScanFolder =
 LongFileList =
 FileList = 
 PIDs = 
+RunningScripts = 
 
 Gosub,READINI
 GoSub, ShowWindow
@@ -126,11 +130,22 @@ WRITEINI:
 		ScanFolder := NewScanFolder
 	If NOT ScanFolder
 	{
-		Msgbox, No folder selected, so defaulting to Axe'm folder
+		Msgbox, No folder selected, so defaulting to Axem folder
 		ScanFolder := A_WorkingDir
 		}
 	IniWrite, %ScanFolder%, %IniFile%, General, ScanFolder
 return
+
+
+GetValue(var,index)
+{
+	Loop, parse, var, `n
+	{
+		If A_Index = %index%
+			return %A_LoopField%
+	}
+}
+
 
 /*
 		Title: Command Functions
