@@ -3,18 +3,14 @@
 ;
 ; scrollable gui code by Lexikos
 ; http://www.autohotkey.com/forum/viewtopic.php?p=177673#177673
-;
-; todo:
-; * mousewheel scrolling
-; * remember window sizes?
 
 #NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
 DetectHiddenWindows On  ; Allows a script's hidden main window to be detected.	
 SetTitleMatchMode 2  ; Avoids the need to specify the full path of the file below.
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-OnMessage(0x114, "OnScroll") ; WM_HSCROLL
 OnMessage(0x115, "OnScroll") ; WM_VSCROLL
+OnMessage(0x114, "OnScroll") ; WM_HSCROLL
 
 functions()
 
@@ -72,13 +68,27 @@ ShowWindow:
 		}
 		Gui, Add, Checkbox, ys hp %DisplayCheckbox% vCheckbox%A_Index% gStartStopScript, %EntryTitle%
 
-	 }
-	 Gui, Add, Button, Section xs, &Rescan
-	 Gui, Add, Button, ys, &Change Folder
-	 Gui, Add, Button, ys Default, &Hide
+	}
+	Gui, Add, Button, Section xs, &Rescan
+	Gui, Add, Button, ys, &Change Folder
+	Gui, Add, Button, ys Default, &Hide
+	 
+	Menu, FileMenu, Add, &Open    Ctrl+O, MenuFileOpen  ; See remarks below about Ctrl+O.
+	Menu, FileMenu, Add, E&xit, MenuHandler
+	Menu, HelpMenu, Add, &About, MenuHandler
+	Menu, MyMenuBar, Add, &File, :FileMenu  ; Attach the two sub-menus that were created above.
+	Menu, MyMenuBar, Add, &Help, :HelpMenu
+	;Gui, Menu, MyMenuBar
+	 
 	Gui, Show,W560 H560 VScroll Center,Axem - AutoHotKey Scripts Manager
 	Gui, +LastFound
 	GroupAdd, MyGui, % "ahk_id " . WinExist()
+return
+
+MenuFileOpen:
+return
+
+MenuHandler:
 return
 
 
@@ -164,15 +174,15 @@ GuiSize:
 return
 
 GuiClose:
-ExitApp
+WinHide
 
 #IfWinActive ahk_group MyGui
-WheelUp::
-WheelDown::
-+WheelUp::
-+WheelDown::
-    ; SB_LINEDOWN=1, SB_LINEUP=0, WM_HSCROLL=0x114, WM_VSCROLL=0x115
-    OnScroll(InStr(A_ThisHotkey,"Down") ? 1 : 0, 0, GetKeyState("Shift") ? 0x114 : 0x115, WinExist())
+	WheelUp::
+	WheelDown::
+	+WheelUp::
+	+WheelDown::
+  ; SB_LINEDOWN=1, SB_LINEUP=0, WM_HSCROLL=0x114, WM_VSCROLL=0x115
+  OnScroll(InStr(A_ThisHotkey,"Down") ? 1 : 0, 0, GetKeyState("Shift") ? 0x115 : 0x114, WinExist())
 return
 #IfWinActive
 
