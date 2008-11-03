@@ -1,6 +1,7 @@
 ; Axem (AutoHotkey Script Manager -AHKSM)
 ; Language:       English
 ;
+; Synopsis: test
 ; scrollable gui code by Lexikos
 ; http://www.autohotkey.com/forum/viewtopic.php?p=177673#177673
 
@@ -9,8 +10,6 @@ DetectHiddenWindows On  ; Allows a script's hidden main window to be detected.
 SetTitleMatchMode 2  ; Avoids the need to specify the full path of the file below.
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-OnMessage(0x115, "OnScroll") ; WM_VSCROLL
-OnMessage(0x114, "OnScroll") ; WM_HSCROLL
 
 functions()
 
@@ -23,6 +22,7 @@ Else
 	StringTrimRight, Editor, Editor, 3
 ScanFolder =
 LongFileList =
+PathList = 
 FileList = 
 RunningScripts = 
 
@@ -39,15 +39,22 @@ GoSub, Wait
 
 
 ShowWindow:
-	Gui Destroy
-	Gui, +Resize +0x200000 ; WS_VSCROLL | WS_HSCROLl
-	Gui, Add, Text,, Script found in %ScanFolder%:
-	winget,ls,list,AutoHotkey ahk_class AutoHotkey
+; Create the ListView with two columns, Name and Size:
 
+	Gui Destroy
+	Loaded=0
+	Gui, +Resize
+	Gui, Add, Text,, Scripts found in %ScanFolder%:
+	winget,ls,list,AutoHotkey ahk_class AutoHotkey
+	
+	Gui, Add, ListView, r20 w740 Count20 Checked AltSubmit gMyListView vMyListView, Script|Synopsis
+	GuiControl, -Redraw, MyListView
 	Loop, %ScanFolder%\*.ahk, , 1  ; Recurse into subfolders.
 	{
 		Counter := A_Index
+
 		LongFileList = %LongFileList%%A_LoopFileLongPath%`n
+		PathList = %PathList%%A_LoopFileDir%`n
 	  FileList = %FileList%%A_LoopFileName%`n
 		If IgnoreSelf 
 			If A_LoopFileLongPath = %A_ScriptFullPath% ; ignore own script
@@ -55,8 +62,7 @@ ShowWindow:
 		FolderLen := StrLen(ScanFolder)+2
 		EntryTitle := SubStr(A_LoopFileLongPath, FolderLen)
 
-		Gui, Add, Button, Section xs gEditFile vEditFile%A_Index%, Edit
-		
+		%Counter%active=0		
 		DisplayCheckbox = 
 		Loop,%ls%
 		{
@@ -64,11 +70,23 @@ ShowWindow:
 			StringTrimRight, RunningScript, RunningScript, 1
 			File := GetValue(FileList,Counter)
 			If File = %RunningScript%
-				DisplayCheckbox = Checked
+			{
+				DisplayCheckbox = Check
+				%Counter%active=1
+			}
 		}
-		Gui, Add, Checkbox, ys hp %DisplayCheckbox% vCheckbox%A_Index% gStartStopScript, %EntryTitle%
+		FileReadLine, line, %A_LoopFileLongPath%, 1
+		if ErrorLevel
+				break
+		if Substr(line,1,1) = ";" 
+			synopsis := Substr(line,2)
 
+		LV_Add(DisplayCheckbox, EntryTitle,synopsis)
 	}
+	LV_ModifyCol()  ; Auto-size each column to fit its contents.
+	Loaded=1
+	GuiControl, +Redraw, MyListView
+	
 	Gui, Add, Button, Section xs, &Rescan
 	Gui, Add, Button, ys, &Change Folder
 	Gui, Add, Button, ys Default, &Hide
@@ -82,9 +100,7 @@ ShowWindow:
 	Menu, MyMenuBar, Add, &Help, :HelpMenu
 	Gui, Menu, MyMenuBar
 	 
-	Gui, Show,W560 H560 VScroll Center,Axem - AutoHotKey Scripts Manager
-	Gui, +LastFound
-	GroupAdd, MyGui, % "ahk_id " . WinExist()
+	Gui, Show,W760 H440 Center,Axem - AutoHotKey Scripts Manager
 return
 
 ; The following part is needed only if the script will be run on Windows 95/98/Me:
@@ -101,22 +117,74 @@ MenuExit:
 ExitApp
 return
 
+MyListView:
+if A_GuiEvent = DoubleClick
+{
+    LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
+		If %A_EventInfo%active=1
+		{
+			LV_Modify(A_EventInfo,"-Check")
+			%A_EventInfo%active=0
+			GoSub, StartStopScript
+			}
+		Else
+		{
+			%A_EventInfo%active=1
+			LV_Modify(A_EventInfo, "Check")  ; Uncheck all the checkboxes.
+			GoSub, StartStopScript
+		}
+} 
+else if A_GuiEvent = RightClick
+{
+    LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
+		LastRightClicked := A_EventInfo
+		Menu,Options,Add,Edit,EditFile
+		Menu,Options,Add,Show Folder,ShowFolder
+    Menu,Options,Show
+		
+} 
+else if A_GuiEvent = I
+{
+	If Loaded=1 
+	{
+		If InStr(ErrorLevel, "C", true) OR InStr(ErrorLevel, "c", true)
+		{
+	    LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
+			If %A_EventInfo%active=1
+			{
+				%A_EventInfo%active=0
+				GoSub, StartStopScript
+				}
+			Else
+			{
+				%A_EventInfo%active=1
+				GoSub, StartStopScript
+			}
+		}
+	}
+} 
+return
 
 EditFile:
-	VarLen := StrLen("EditFile") + 1
-	myindex := SubStr(A_GuiControl, VarLen)
+	myindex := LastRightClicked
 	LongFile := GetValue(LongFileList,myindex)
 	run, %editor% "%LongFile%"
 return
 
+ShowFolder:
+	myindex := LastRightClicked
+	Path := GetValue(PathList,myindex)
+	run, "%Path%"
+return
+
+
 
 StartStopScript:
-	VarLen := StrLen("Checkbox") + 1
-	myindex := SubStr(A_GuiControl, VarLen)
+	myindex := A_EventInfo
 	LongFile := GetValue(LongFileList,myindex)
 	File := GetValue(FileList,myindex)
 	GuiControlGet, Status,,Checkbox%myindex%
-	If status <> 0
+	If %A_EventInfo%active <> 0
 	{
 		;start
 		run, %LongFile%
@@ -174,134 +242,6 @@ GetValue(var,index)
 	Loop, parse, var, `n
 		If A_Index = %index%
 			return %A_LoopField%
-}
-
-; scrollable gui code by Lexikos
-; http://www.autohotkey.com/forum/viewtopic.php?p=177673#177673
-GuiSize:
-    UpdateScrollBars(A_Gui, A_GuiWidth, A_GuiHeight)
-return
-
-GuiClose:
-WinHide
-
-#IfWinActive ahk_group MyGui
-	WheelUp::
-	WheelDown::
-	+WheelUp::
-	+WheelDown::
-  ; SB_LINEDOWN=1, SB_LINEUP=0, WM_HSCROLL=0x114, WM_VSCROLL=0x115
-  OnScroll(InStr(A_ThisHotkey,"Down") ? 1 : 0, 0, GetKeyState("Shift") ? 0x115 : 0x114, WinExist())
-return
-#IfWinActive
-
-UpdateScrollBars(GuiNum, GuiWidth, GuiHeight)
-{
-    static SIF_RANGE=0x1, SIF_PAGE=0x2, SIF_DISABLENOSCROLL=0x8, SB_HORZ=0, SB_VERT=1
-    
-    Gui, %GuiNum%:Default
-    Gui, +LastFound
-    
-    ; Calculate scrolling area.
-    Left := Top := 9999
-    Right := Bottom := 0
-    WinGet, ControlList, ControlList
-    Loop, Parse, ControlList, `n
-    {
-        GuiControlGet, c, Pos, %A_LoopField%
-        if (cX < Left)
-            Left := cX
-        if (cY < Top)
-            Top := cY
-        if (cX + cW > Right)
-            Right := cX + cW
-        if (cY + cH > Bottom)
-            Bottom := cY + cH
-    }
-    Left -= 8
-    Top -= 8
-    Right += 8
-    Bottom += 8
-    ScrollWidth := Right-Left
-    ScrollHeight := Bottom-Top
-    
-    ; Initialize SCROLLINFO.
-    VarSetCapacity(si, 28, 0)
-    NumPut(28, si) ; cbSize
-    NumPut(SIF_RANGE | SIF_PAGE, si, 4) ; fMask
-    
-    ; Update horizontal scroll bar.
-    NumPut(ScrollWidth, si, 12) ; nMax
-    NumPut(GuiWidth, si, 16) ; nPage
-    DllCall("SetScrollInfo", "uint", WinExist(), "uint", SB_HORZ, "uint", &si, "int", 1)
-    
-    ; Update vertical scroll bar.
-;     NumPut(SIF_RANGE | SIF_PAGE | SIF_DISABLENOSCROLL, si, 4) ; fMask
-    NumPut(ScrollHeight, si, 12) ; nMax
-    NumPut(GuiHeight, si, 16) ; nPage
-    DllCall("SetScrollInfo", "uint", WinExist(), "uint", SB_VERT, "uint", &si, "int", 1)
-    
-    if (Left < 0 && Right < GuiWidth)
-        x := Abs(Left) > GuiWidth-Right ? GuiWidth-Right : Abs(Left)
-    if (Top < 0 && Bottom < GuiHeight)
-        y := Abs(Top) > GuiHeight-Bottom ? GuiHeight-Bottom : Abs(Top)
-    if (x || y)
-        DllCall("ScrollWindow", "uint", WinExist(), "int", x, "int", y, "uint", 0, "uint", 0)
-}
-
-OnScroll(wParam, lParam, msg, hwnd)
-{
-    static SIF_ALL=0x17, SCROLL_STEP=10
-    
-    bar := msg=0x115 ; SB_HORZ=0, SB_VERT=1
-    
-    VarSetCapacity(si, 28, 0)
-    NumPut(28, si) ; cbSize
-    NumPut(SIF_ALL, si, 4) ; fMask
-    if !DllCall("GetScrollInfo", "uint", hwnd, "int", bar, "uint", &si)
-        return
-    
-    VarSetCapacity(rect, 16)
-    DllCall("GetClientRect", "uint", hwnd, "uint", &rect)
-    
-    new_pos := NumGet(si, 20) ; nPos
-    
-    action := wParam & 0xFFFF
-    if action = 0 ; SB_LINEUP
-        new_pos -= SCROLL_STEP
-    else if action = 1 ; SB_LINEDOWN
-        new_pos += SCROLL_STEP
-    else if action = 2 ; SB_PAGEUP
-        new_pos -= NumGet(rect, 12, "int") - SCROLL_STEP
-    else if action = 3 ; SB_PAGEDOWN
-        new_pos += NumGet(rect, 12, "int") - SCROLL_STEP
-    else if action = 5 ; SB_THUMBTRACK
-        new_pos := NumGet(si, 24, "int") ; nTrackPos
-    else if action = 6 ; SB_TOP
-        new_pos := NumGet(si, 8, "int") ; nMin
-    else if action = 7 ; SB_BOTTOM
-        new_pos := NumGet(si, 12, "int") ; nMax
-    else
-        return
-    
-    min := NumGet(si, 8, "int") ; nMin
-    max := NumGet(si, 12, "int") - NumGet(si, 16) ; nMax-nPage
-    new_pos := new_pos > max ? max : new_pos
-    new_pos := new_pos < min ? min : new_pos
-    
-    old_pos := NumGet(si, 20, "int") ; nPos
-    
-    x := y := 0
-    if bar = 0 ; SB_HORZ
-        x := old_pos-new_pos
-    else
-        y := old_pos-new_pos
-    ; Scroll contents of window and invalidate uncovered area.
-    DllCall("ScrollWindow", "uint", hwnd, "int", x, "int", y, "uint", 0, "uint", 0)
-    
-    ; Update scroll bar.
-    NumPut(new_pos, si, 20, "int") ; nPos
-    DllCall("SetScrollInfo", "uint", hwnd, "int", bar, "uint", &si, "int", 1)
 }
 
 
