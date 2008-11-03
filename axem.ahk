@@ -23,7 +23,6 @@ ScanFolder =
 LongFileList =
 PathList = 
 FileList = 
-RunningScripts = 
 
 
 Menu, tray, NoStandard
@@ -216,8 +215,6 @@ ButtonRescan:
 ScanFolder =
 LongFileList =
 FileList = 
-PIDs = 
-RunningScripts = 
 
 Gosub,READINI
 GoSub, ShowWindow
