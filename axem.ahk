@@ -38,7 +38,7 @@ GoSub, Wait
 
 ShowWindow:
 	Gui Destroy
-	Loaded=0
+	EnableCheckboxEvents=0
 	Gui, +Resize
 	Gui, Add, Text,, Scripts found in %ScanFolder%:
 	winget,ls,list,AutoHotkey ahk_class AutoHotkey
@@ -80,7 +80,7 @@ ShowWindow:
 		LV_Add(DisplayCheckbox, EntryTitle,synopsis)
 	}
 	LV_ModifyCol()  ; Auto-size each column to fit its contents.
-	Loaded=1
+	EnableCheckboxEvents=1
 	GuiControl, +Redraw, MyListView
 	
 	Gui, Add, Button, Section xs vRescan, &Rescan
@@ -149,13 +149,12 @@ else if A_GuiEvent = RightClick
     LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
 		LastRightClicked := A_EventInfo
 		Menu,Options,Add,Edit,EditFile
-		Menu,Options,Add,Show Folder,ShowFolder
-    Menu,Options,Show, %A_GuiX%, %A_GuiY%
-		
+		Menu,Options,Add,Explore...,ShowFolder
+    Menu,Options,Show, %A_GuiX%, %A_GuiY%	
 } 
 else if A_GuiEvent = I
 {
-	If Loaded=1 
+	If EnableCheckboxEvents=1 
 	{
 		If InStr(ErrorLevel, "C", true) OR InStr(ErrorLevel, "c", true)
 		{
@@ -164,7 +163,7 @@ else if A_GuiEvent = I
 			{
 				%A_EventInfo%active=0
 				GoSub, StartStopScript
-				}
+			}
 			Else
 			{
 				%A_EventInfo%active=1
