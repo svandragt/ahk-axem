@@ -2,17 +2,13 @@
 ; Language:       English
 ;
 ; Synopsis: test
-; scrollable gui code by Lexikos
-; http://www.autohotkey.com/forum/viewtopic.php?p=177673#177673
-
-#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
+#NoEnv
 DetectHiddenWindows On  ; Allows a script's hidden main window to be detected.	
 SetTitleMatchMode 2  ; Avoids the need to specify the full path of the file below.
-SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
+SendMode Input
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-#Include Anchor.ahk
+#Include Anchor.ahk ; Thanks to Titan for their Anchoring & functions tools http://www.autohotkey.net/~Titan/
 #Include Functions.ahk
-
 
 functions()
 
@@ -40,19 +36,16 @@ GoSub, ShowWindow
 GoSub, Wait
 
 
-
 ShowWindow:
-; Create the ListView with two columns, Name and Size:
-
 	Gui Destroy
 	Loaded=0
 	Gui, +Resize
 	Gui, Add, Text,, Scripts found in %ScanFolder%:
 	winget,ls,list,AutoHotkey ahk_class AutoHotkey
 	
-	Gui, Add, ListView, r20 w740 Checked AltSubmit gMyListView vMyListView, Script|Synopsis
-	GuiControl, -Redraw, MyListView
-	Loop, %ScanFolder%\*.ahk, , 1  ; Recurse into subfolders.
+	Gui, Add, ListView, r20 w740 Count20 Checked AltSubmit gMyListView vMyListView, Script|Synopsis
+	GuiControl, -Redraw, MyListView ; for performance reasons
+	Loop, %ScanFolder%\*.ahk, , 1 
 	{
 		Counter := A_Index
 
