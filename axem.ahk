@@ -73,22 +73,32 @@ ShowWindow:
 	Gui, Add, Button, ys, &Change Folder
 	Gui, Add, Button, ys Default, &Hide
 	 
-	Menu, FileMenu, Add, &Open    Ctrl+O, MenuFileOpen  ; See remarks below about Ctrl+O.
-	Menu, FileMenu, Add, E&xit, MenuHandler
-	Menu, HelpMenu, Add, &About, MenuHandler
+	Menu, FileMenu, Add, &Open    Ctrl+O, ButtonChangeFolder  ; See remarks below about Ctrl+O.
+	Menu, FileMenu, Add, E&xit, MenuExit
+	Menu, HelpMenu, Add, &Support    F1, MenuOnline
+	Menu, ViewMenu, Add, &Reload    Ctrl+R, ButtonRescan  ; See remarks below about Ctrl+O.
 	Menu, MyMenuBar, Add, &File, :FileMenu  ; Attach the two sub-menus that were created above.
+	Menu, MyMenuBar, Add, &View, :ViewMenu
 	Menu, MyMenuBar, Add, &Help, :HelpMenu
-	;Gui, Menu, MyMenuBar
+	Gui, Menu, MyMenuBar
 	 
 	Gui, Show,W560 H560 VScroll Center,Axem - AutoHotKey Scripts Manager
 	Gui, +LastFound
 	GroupAdd, MyGui, % "ahk_id " . WinExist()
 return
 
-MenuFileOpen:
+; The following part is needed only if the script will be run on Windows 95/98/Me:
+#IfWinActive
+$^o::Send ^o
+MenuOnline:
+	SupportUrl = http://www.donationcoder.com/Forums/bb/index.php?topic=15482.0
+	msgbox,4,Visit Online Support,Support on Axem is given via the Donationcoder.com community forums. Do you want to load the following webpage?`n`n%SupportUrl%
+	IfMsgBox Yes
+    Run, %supporturl%
 return
 
-MenuHandler:
+MenuExit:
+ExitApp
 return
 
 
@@ -147,6 +157,7 @@ return
 
 WRITEINI:
 	; Store settings
+	Gui +OwnDialogs  ; Force the user to dismiss the FileSelectFile dialog before returning to the main window.
 	FileSelectFolder, NewScanFolder, *%A_WorkingDir%, 3, Select an AHK scripts folder to manage
 	If NOT ErrorLevel
 		ScanFolder := NewScanFolder
@@ -161,10 +172,8 @@ return
 GetValue(var,index)
 {
 	Loop, parse, var, `n
-	{
 		If A_Index = %index%
 			return %A_LoopField%
-	}
 }
 
 ; scrollable gui code by Lexikos
