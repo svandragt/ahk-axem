@@ -90,10 +90,10 @@ ShowWindow:
 	Gui, Add, Button, ys vChangeFolder, &Change Folder
 	Gui, Add, Button, ys Default vHide, &Hide
 	 
-	Menu, FileMenu, Add, &Open    Ctrl+O, ButtonChangeFolder  ; See remarks below about Ctrl+O.
-	Menu, FileMenu, Add, E&xit, MenuExit
-	Menu, HelpMenu, Add, &Support    F1, MenuOnline
-	Menu, ViewMenu, Add, &Reload    Ctrl+R, ButtonRescan  ; See remarks below about Ctrl+O.
+	Menu, FileMenu, Add, &Open `tCtrl+O, ButtonChangeFolder  ; See remarks below about Ctrl+O.
+	Menu, FileMenu, Add, E&xit `tAlt-F4, MenuExit
+	Menu, HelpMenu, Add, &Support `tF1, MenuOnline
+	Menu, ViewMenu, Add, &Reload   `tCtrl+R, ButtonRescan  ; See remarks below about Ctrl+O.
 	Menu, MyMenuBar, Add, &File, :FileMenu  ; Attach the two sub-menus that were created above.
 	Menu, MyMenuBar, Add, &View, :ViewMenu
 	Menu, MyMenuBar, Add, &Help, :HelpMenu
@@ -103,10 +103,9 @@ ShowWindow:
 	Gui, Show,W760 H440 Center,Axem - AutoHotKey Scripts Manager
 return
 
-GuiSize:  ; Expand or shrink the ListView in response to the user's resizing of the window.
+GuiSize: 
 if A_EventInfo = 1  ; The window has been minimized.  No action needed.
     return
-; Otherwise, the window has been resized or maximized. Resize the ListView to match.
 Anchor("MyListView", "wh")
 Anchor("Rescan", "y",true)
 Anchor("ChangeFolder", "y",true)
@@ -115,10 +114,8 @@ Anchor("Hide", "y",true)
 
 return
 
-
-; The following part is needed only if the script will be run on Windows 95/98/Me:
 #IfWinActive
-$^o::Send ^o
+F1::
 MenuOnline:
 	SupportUrl = http://www.donationcoder.com/Forums/bb/index.php?topic=15482.0
 	msgbox,4,Visit Online Support,Support on Axem is given via the Donationcoder.com community forums. Do you want to load the following webpage?`n`n%SupportUrl%
@@ -126,6 +123,8 @@ MenuOnline:
     Run, %supporturl%
 return
 
+#IfWinActive
+!F4::
 MenuExit:
 GoSub, WriteIni
 ExitApp
@@ -155,10 +154,9 @@ else if A_GuiEvent = RightClick
 		Menu,Options,Add,Edit,EditFile
 		Menu,Options,Add,Explore...,ShowFolder
 		Menu,Options,Add,
-		Menu,Options,Add,Compile using ahk2exe,CompileFiles
+		Menu,Options,Add,Compile,CompileFiles
 		Menu,Options,Add,Publish,PublishFiles
 		Menu,Options,Add,Compile && Publish,CompileAndPublish
-		Menu,Options,Default,Edit
     Menu,Options,Show, %A_GuiX%, %A_GuiY%	
 } 
 else if A_GuiEvent = I
@@ -243,17 +241,29 @@ ButtonHide:
 	WinHide
 return
 
+#IfWinActive
+^o::
 ButtonChangeFolder:
-	FileDelete, %IniFile%
+	Gui +OwnDialogs  ; Force the user to dismiss the FileSelectFile dialog before returning to the main window.
+	FileSelectFolder, NewScanFolder, *%A_WorkingDir%, 3, Select an AHK scripts folder to manage
+	If NOT ErrorLevel
+		ScanFolder := NewScanFolder
+	else
+		msgbox, errorlevel!
+	If ScanFolder=
+		{
+			Msgbox, No folder selected, so defaulting to Axem folder
+			ScanFolder := A_WorkingDir
+		}
 	Gosub, ButtonRescan
 return
 
+#IfWinActive
+^r::
 ButtonRescan:
-ScanFolder =
 LongFileList =
 FileList = 
 
-Gosub,READINI
 GoSub, ShowWindow
 GoSub, Wait
 return
@@ -268,20 +278,11 @@ return
 
 WRITEINI:
 	; Store settings
-	Gui +OwnDialogs  ; Force the user to dismiss the FileSelectFile dialog before returning to the main window.
-	If ScanFolder = 
-	{
-		FileSelectFolder, NewScanFolder, *%A_WorkingDir%, 3, Select an AHK scripts folder to manage
-		If NOT ErrorLevel
-			ScanFolder := NewScanFolder
-		If NOT ScanFolder
-		{
-			Msgbox, No folder selected, so defaulting to Axem folder
-			ScanFolder := A_WorkingDir
-		}
-	}
+	if ScanFolder=
+		Gosub, ButtonChangeFolder
 	IniWrite, %ScanFolder%, %IniFile%, General, ScanFolder
 return
+
 
 GetValue(var,index)
 {
