@@ -7,18 +7,24 @@ DetectHiddenWindows On  ; Allows a script's hidden main window to be detected.
 SetTitleMatchMode 2  ; Avoids the need to specify the full path of the file below.
 SendMode Input
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-#Include Anchor.ahk ; Thanks to Titan for their Anchoring & functions tools http://www.autohotkey.net/~Titan/
-#Include Functions.ahk
+#Include includes\Anchor.ahk ; Thanks to Titan for their Anchoring & functions tools http://www.autohotkey.net/~Titan/
+#Include includes\Functions.ahk
 
 functions()
 
+ZipInstalled = 0
 IgnoreSelf = 0
 IniFile = settings.ini
 RegRead, Editor, HKEY_CLASSES_ROOT, AutoHotkeyScript\Shell\Edit\Command
+RegRead, Compiler, HKEY_CLASSES_ROOT, AutoHotkeyScript\Shell\Compile\Command
 If ErrorLevel
 	Editor = notepad.exe
 Else
 	StringTrimRight, Editor, Editor, 3
+RegRead, Compiler, HKEY_CLASSES_ROOT, AutoHotkeyScript\Shell\Compile\Command
+If NOT ErrorLevel
+	StringTrimRight, Compiler, Compiler, 4
+	
 ScanFolder =
 LongFileList =
 PathList = 
@@ -123,6 +129,7 @@ MenuOnline:
 return
 
 MenuExit:
+GoSub, WriteIni
 ExitApp
 return
 
@@ -149,6 +156,10 @@ else if A_GuiEvent = RightClick
 		LastRightClicked := A_EventInfo
 		Menu,Options,Add,Edit,EditFile
 		Menu,Options,Add,Explore...,ShowFolder
+		Menu,Options,Add,
+		Menu,Options,Add,Compile,CompileFile
+		;Menu,Options,Add,Package,PackageFiles
+		Menu,Options,Default,Edit
     Menu,Options,Show, %A_GuiX%, %A_GuiY%	
 } 
 else if A_GuiEvent = I
@@ -183,6 +194,55 @@ ShowFolder:
 	myindex := LastRightClicked
 	Path := GetValue(PathList,myindex)
 	run, "%Path%"
+return
+
+CompileFile:
+	myindex := LastRightClicked
+	LongFile := GetValue(LongFileList,myindex)
+	run, %compiler% "%LongFile%"
+	GoSub, ShowFolder
+return
+
+PackageFiles:
+	FbZipExe = fbzpack.exe
+	IfExist,%FbZipExe%
+	{
+		ZipInstalled=1
+		Msgbox, Installed
+	}
+	else
+	{
+		PackerUrl = http://www.freebyte.com/download/%FbZipExe%
+		ZipInstalled=0
+		Msgbox,1,Zip packer not found, Axem uses Freebyte ZIP to create packages, which is not installed. Axem will now try to copy it to the program's folder.
+		IfMsgBox,OK
+			UrlDownloadToFile, %PackerUrl%, %FbZipExe%
+		If ErrorLevel
+			GoSub, InstallFailed
+		Else
+		{
+			FileGetSize, size, %FbZipExe%, K  ; Retrieve the size in Kbytes.
+			if size > 40
+				Msgbox,,Installation Complete, Freebyte ZIP has been successfully installed! The package option should now work.
+			else
+			{
+				FileDelete, %FbZipExe%
+				GoSub, InstallFailed
+			}
+		}
+	GoSub, WriteIni
+	
+	
+return
+
+InstallFailed:
+	FbZipWWW = http://www.freebyte.com/fbzip
+	Msgbox,4,Can't download to program folder, Axem couldn't download Freebyte Zip. Please download it and copy %FbZipExe% into Axem's installation folder. Do you want to open Axem's installation folder and open the following webpage?`n`n%FbZipWWW%
+	IfMsgBox Yes
+	{
+		Run, %FbZipWWW%
+		Run, %A_ScriptDir%
+	}
 return
 
 
@@ -227,6 +287,7 @@ READINI:
 	IfNotExist, %IniFile% 
 		GoSub, WRITEINI
 	IniRead, ScanFolder, %IniFile%,General, ScanFolder
+	IniRead, ZipInstalled, %IniFile%,General, ZipInstalled
 return
 
 WRITEINI:
@@ -241,6 +302,7 @@ WRITEINI:
 		ScanFolder := A_WorkingDir
 		}
 	IniWrite, %ScanFolder%, %IniFile%, General, ScanFolder
+	IniWrite, %ZipInstalled%, %IniFile%, General, ZipInstalled
 return
 
 GetValue(var,index)
