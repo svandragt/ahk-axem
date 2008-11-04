@@ -9,7 +9,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #Include includes\Functions.ahk
 
 functions()
-IgnoreSelf = 0
+IgnoreSelf = 1
 IniFile = settings.ini
 RegRead, Editor, HKEY_CLASSES_ROOT, AutoHotkeyScript\Shell\Edit\Command
 RegRead, Compiler, HKEY_CLASSES_ROOT, AutoHotkeyScript\Shell\Compile\Command
@@ -105,13 +105,14 @@ return
 
 GuiSize: 
 if A_EventInfo = 1  ; The window has been minimized.  No action needed.
-    return
+{
+	GoSub, ButtonHide
+  return
+}
 Anchor("MyListView", "wh")
 Anchor("Rescan", "y",true)
 Anchor("ChangeFolder", "y",true)
 Anchor("Hide", "y",true)
-
-
 return
 
 #IfWinActive
@@ -126,7 +127,7 @@ return
 #IfWinActive
 !F4::
 MenuExit:
-GoSub, WriteIni
+GoSub, WRITEINI
 ExitApp
 return
 
@@ -264,6 +265,7 @@ return
 
 
 ButtonHide:
+	GoSub, WRITEINI
 	WinHide
 return
 
@@ -274,13 +276,12 @@ ButtonChangeFolder:
 	FileSelectFolder, NewScanFolder, *%A_WorkingDir%, 3, Select an AHK scripts folder to manage
 	If NOT ErrorLevel
 		ScanFolder := NewScanFolder
-	else
-		msgbox, errorlevel!
 	If ScanFolder=
 		{
 			Msgbox, No folder selected, so defaulting to Axem folder
 			ScanFolder := A_WorkingDir
 		}
+	GoSub, WRITEINI
 	Gosub, ButtonRescan
 return
 
@@ -300,6 +301,9 @@ READINI:
 	IfNotExist, %IniFile% 
 		GoSub, WRITEINI
 	IniRead, ScanFolder, %IniFile%,General, ScanFolder
+	IniRead, NewIgnoreSelf, %IniFile%,General, IgnoreSelf
+	If NewIgnoreSelf=0
+		IgnoreSelf=0
 return
 
 WRITEINI:
