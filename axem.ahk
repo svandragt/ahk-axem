@@ -5,8 +5,8 @@ DetectHiddenWindows On  ; Allows a script's hidden main window to be detected.
 SetTitleMatchMode, 2  ; Avoids the need to specify the full path of the file below.
 SendMode Input
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-#Include Anchor.ahk ; Thanks to Titan for their Anchoring & functions tools http://www.autohotkey.net/~Titan/
-#Include Functions.ahk
+#Include includes\Anchor.ahk ; Thanks to Titan for their Anchoring & functions tools http://www.autohotkey.net/~Titan/
+#Include includes\Functions.ahk
 
 functions()
 IgnoreSelf = 0
@@ -201,17 +201,43 @@ return
 CompileFiles:
 	myindex := LastRightClicked
 	LongFile := GetValue(LongFileList,myindex)
-	runWait, %compiler% "%LongFile%"
+	ShortFile := GetValue(FileList,myindex)
+	Path := GetValue(PathList,myindex)
+
+	; default publish folder
+	CompileFolder = %Path%
+	
+	; get ahk file
+	; change to exe
+	; find exe
+	; use that as path
+	
+	CompiledFile := SubStr(ShortFile,1,-3) "exe"
+	Loop %CompileFolder%\%CompiledFile%,0,1
+	{
+		CompileFolder := A_LoopFileDir
+		break
+	}
+	runWait, %compiler% "%LongFile%" /out "%CompileFolder%\%CompiledFile%"
 	GoSub, ShowFolder
 return
 
 PublishFiles:
 	myindex := LastRightClicked
 	Path := GetValue(PathList,myindex)
-	PublishBat = %Path%\publish.bat
+	
+	; default publish folder
+	PublishFolder = %Path%\publish
+	; look for publish.bat if this exist then use their folder as the publish folder
+	Loop publish.bat,0,1
+	{
+   PublishFolder := A_LoopFileDir
+	 break
+	}
+	PublishBat = publish.bat
 
 	IfExist, %PublishBat%
-		runWait, %PublishBat%
+		runWait, %PublishBat%,%PublishFolder%
 	Else
 	{
 		MsgBox,4,No batch file found, No publishing script found.  Add commands to a publishing batch file that are processed when publishing a project. For example you can create a zip file and uploading it via ftp.`n`nCreate and edit %PublishBat%?
