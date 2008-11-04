@@ -1,7 +1,5 @@
-; Axem (AutoHotkey Script Manager -AHKSM)
+; Axem (AutoHotkey Script Manager)
 ; Language:       English
-;
-; Synopsis: test
 #NoEnv
 DetectHiddenWindows On  ; Allows a script's hidden main window to be detected.	
 SetTitleMatchMode, 2  ; Avoids the need to specify the full path of the file below.
@@ -79,6 +77,8 @@ ShowWindow:
 				break
 		if Substr(line,1,1) = ";" 
 			synopsis := Substr(line,2)
+		else
+			synopsis =
 
 		LV_Add(DisplayCheckbox, EntryTitle,synopsis)
 	}
@@ -203,7 +203,7 @@ return
 CompileFiles:
 	myindex := LastRightClicked
 	LongFile := GetValue(LongFileList,myindex)
-	run, %compiler% "%LongFile%"
+	runWait, %compiler% "%LongFile%"
 	GoSub, ShowFolder
 return
 
@@ -213,7 +213,7 @@ PublishFiles:
 	PublishBat = %Path%\publish.bat
 
 	IfExist, %PublishBat%
-		run, %PublishBat%
+		runWait, %PublishBat%
 	Else
 	{
 		MsgBox,4,No batch file found, No publishing script found.  Add commands to a publishing batch file that are processed when publishing a project. For example you can create a zip file and uploading it via ftp.`n`nCreate and edit %PublishBat%?
