@@ -4,15 +4,13 @@
 ; Synopsis: test
 #NoEnv
 DetectHiddenWindows On  ; Allows a script's hidden main window to be detected.	
-SetTitleMatchMode 2  ; Avoids the need to specify the full path of the file below.
+SetTitleMatchMode, 2  ; Avoids the need to specify the full path of the file below.
 SendMode Input
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-#Include includes\Anchor.ahk ; Thanks to Titan for their Anchoring & functions tools http://www.autohotkey.net/~Titan/
-#Include includes\Functions.ahk
+#Include Anchor.ahk ; Thanks to Titan for their Anchoring & functions tools http://www.autohotkey.net/~Titan/
+#Include Functions.ahk
 
 functions()
-
-ZipInstalled = 0
 IgnoreSelf = 0
 IniFile = settings.ini
 RegRead, Editor, HKEY_CLASSES_ROOT, AutoHotkeyScript\Shell\Edit\Command
@@ -157,8 +155,9 @@ else if A_GuiEvent = RightClick
 		Menu,Options,Add,Edit,EditFile
 		Menu,Options,Add,Explore...,ShowFolder
 		Menu,Options,Add,
-		Menu,Options,Add,Compile,CompileFile
-		;Menu,Options,Add,Package,PackageFiles
+		Menu,Options,Add,Compile using ahk2exe,CompileFiles
+		Menu,Options,Add,Publish,PublishFiles
+		Menu,Options,Add,Compile && Publish,CompileAndPublish
 		Menu,Options,Default,Edit
     Menu,Options,Show, %A_GuiX%, %A_GuiY%	
 } 
@@ -196,52 +195,30 @@ ShowFolder:
 	run, "%Path%"
 return
 
-CompileFile:
+CompileAndPublish:
+	GoSub, CompileFiles
+	GoSub, PublishFiles
+return
+
+CompileFiles:
 	myindex := LastRightClicked
 	LongFile := GetValue(LongFileList,myindex)
 	run, %compiler% "%LongFile%"
 	GoSub, ShowFolder
 return
 
-PackageFiles:
-	FbZipExe = fbzpack.exe
-	IfExist,%FbZipExe%
-	{
-		ZipInstalled=1
-		Msgbox, Installed
-	}
-	else
-	{
-		PackerUrl = http://www.freebyte.com/download/%FbZipExe%
-		ZipInstalled=0
-		Msgbox,1,Zip packer not found, Axem uses Freebyte ZIP to create packages, which is not installed. Axem will now try to copy it to the program's folder.
-		IfMsgBox,OK
-			UrlDownloadToFile, %PackerUrl%, %FbZipExe%
-		If ErrorLevel
-			GoSub, InstallFailed
-		Else
-		{
-			FileGetSize, size, %FbZipExe%, K  ; Retrieve the size in Kbytes.
-			if size > 40
-				Msgbox,,Installation Complete, Freebyte ZIP has been successfully installed! The package option should now work.
-			else
-			{
-				FileDelete, %FbZipExe%
-				GoSub, InstallFailed
-			}
-		}
-	GoSub, WriteIni
-	
-	
-return
+PublishFiles:
+	myindex := LastRightClicked
+	Path := GetValue(PathList,myindex)
+	PublishBat = %Path%\publish.bat
 
-InstallFailed:
-	FbZipWWW = http://www.freebyte.com/fbzip
-	Msgbox,4,Can't download to program folder, Axem couldn't download Freebyte Zip. Please download it and copy %FbZipExe% into Axem's installation folder. Do you want to open Axem's installation folder and open the following webpage?`n`n%FbZipWWW%
-	IfMsgBox Yes
+	IfExist, %PublishBat%
+		run, %PublishBat%
+	Else
 	{
-		Run, %FbZipWWW%
-		Run, %A_ScriptDir%
+		MsgBox,4,No batch file found, No publishing script found.  Add commands to a publishing batch file that are processed when publishing a project. For example you can create a zip file and uploading it via ftp.`n`nCreate and edit %PublishBat%?
+		IfMsgBox Yes
+			Run, %editor% "%PublishBat%"
 	}
 return
 
@@ -287,22 +264,23 @@ READINI:
 	IfNotExist, %IniFile% 
 		GoSub, WRITEINI
 	IniRead, ScanFolder, %IniFile%,General, ScanFolder
-	IniRead, ZipInstalled, %IniFile%,General, ZipInstalled
 return
 
 WRITEINI:
 	; Store settings
 	Gui +OwnDialogs  ; Force the user to dismiss the FileSelectFile dialog before returning to the main window.
-	FileSelectFolder, NewScanFolder, *%A_WorkingDir%, 3, Select an AHK scripts folder to manage
-	If NOT ErrorLevel
-		ScanFolder := NewScanFolder
-	If NOT ScanFolder
+	If ScanFolder = 
 	{
-		Msgbox, No folder selected, so defaulting to Axem folder
-		ScanFolder := A_WorkingDir
+		FileSelectFolder, NewScanFolder, *%A_WorkingDir%, 3, Select an AHK scripts folder to manage
+		If NOT ErrorLevel
+			ScanFolder := NewScanFolder
+		If NOT ScanFolder
+		{
+			Msgbox, No folder selected, so defaulting to Axem folder
+			ScanFolder := A_WorkingDir
 		}
+	}
 	IniWrite, %ScanFolder%, %IniFile%, General, ScanFolder
-	IniWrite, %ZipInstalled%, %IniFile%, General, ZipInstalled
 return
 
 GetValue(var,index)
