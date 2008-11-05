@@ -54,7 +54,7 @@ ShowWindow:
 		PathList = %PathList%%A_LoopFileDir%`n
 	  FileList = %FileList%%A_LoopFileName%`n
 		If IgnoreSelf 
-			If A_LoopFileLongPath = %A_ScriptFullPath% ; ignore own script
+			If Instr(A_LoopFileDir,A_ScriptDir) ; ignore own script
 				continue
 		FolderLen := StrLen(ScanFolder)+2
 		EntryTitle := SubStr(A_LoopFileLongPath, FolderLen)
