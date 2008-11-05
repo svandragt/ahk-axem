@@ -53,9 +53,15 @@ ShowWindow:
 		LongFileList = %LongFileList%%A_LoopFileLongPath%`n
 		PathList = %PathList%%A_LoopFileDir%`n
 	  FileList = %FileList%%A_LoopFileName%`n
-		If IgnoreSelf 
-			If Instr(A_LoopFileDir,A_ScriptDir) ; ignore own script
+		If IgnoreSelf=1
+		{
+			If A_LoopFileDir = %A_ScriptDir%\includes ; ignore own script
 				continue
+			If A_LoopFileDir = %A_ScriptDir%\publish ; ignore own script
+				continue
+			If A_LoopFileLongPath = %A_ScriptFullPath%
+				continue		
+		}				
 		FolderLen := StrLen(ScanFolder)+2
 		EntryTitle := SubStr(A_LoopFileLongPath, FolderLen)
 
@@ -92,7 +98,9 @@ ShowWindow:
 	 
 	Menu, FileMenu, Add, &Open `tCtrl+O, ButtonChangeFolder  ; See remarks below about Ctrl+O.
 	Menu, FileMenu, Add, E&xit `tAlt-F4, MenuExit
-	Menu, HelpMenu, Add, &Support `tF1, MenuOnline
+	Menu, HelpMenu, Add, &About Axem `tF1, MenuAbout
+	Menu, HelpMenu, Add, &Support, MenuOnline
+	Menu, HelpMenu, Add, &Homepage, MenuHomepage
 	Menu, ViewMenu, Add, &Reload   `tCtrl+R, ButtonRescan  ; See remarks below about Ctrl+O.
 	Menu, MyMenuBar, Add, &File, :FileMenu  ; Attach the two sub-menus that were created above.
 	Menu, MyMenuBar, Add, &View, :ViewMenu
@@ -113,6 +121,17 @@ Anchor("MyListView", "wh")
 Anchor("Rescan", "y",true)
 Anchor("ChangeFolder", "y",true)
 Anchor("Hide", "y",true)
+return
+
+MenuHomepage:
+Url = http://justice.dcmembers.com
+	msgbox,4,Visit Axem's Homepage,Information about this and other projects can be found on Justice's DcMembers page. Do you want to load the following webpage?`n`n%Url%
+	IfMsgBox Yes
+    Run, %url%
+return
+
+MenuAbout:
+run, readme.txt
 return
 
 #IfWinActive
