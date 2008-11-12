@@ -1,5 +1,4 @@
 ; Axem (AutoHotkey Script Manager)
-; Language:       English
 #NoEnv
 #SingleInstance
 DetectHiddenWindows On  ; Allows a script's hidden main window to be detected.	
@@ -12,6 +11,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 functions()
 IgnoreSelf = 1
 IniFile = settings.ini
+AppTitle = Axem - AutoHotKey Scripts Manager
 RegRead, Editor, HKEY_CLASSES_ROOT, AutoHotkeyScript\Shell\Edit\Command
 RegRead, Compiler, HKEY_CLASSES_ROOT, AutoHotkeyScript\Shell\Compile\Command
 If ErrorLevel
@@ -26,7 +26,7 @@ ScanFolder =
 LongFileList =
 PathList = 
 FileList = 
-
+AppId =
 
 Menu, tray, NoStandard
 Menu, tray, Add, Show Axem,ButtonRescan
@@ -45,22 +45,17 @@ GoSub, ShowWindow
 GoSub, Wait
 
 ShowWindow:
+	EnableCheckboxEvents = 0
 	Gui Destroy
-	msgbox, boo
-	EnableCheckboxEvents=0
 	Gui, +Resize
 	Gui, Add, Text,, Scripts found in %ScanFolder%:
-	winget,ls,list,AutoHotkey ahk_class AutoHotkey
-	
+
 	Gui, Add, ListView, r20 w740 Count20 Checked AltSubmit gMyListView vMyListView, Script|Synopsis
 	GuiControl, -Redraw, MyListView ; for performance reasons
+	counter = 0
 	Loop, %ScanFolder%\*.ahk, , 1 
 	{
-		Counter := A_Index
-
-		LongFileList = %LongFileList%%A_LoopFileLongPath%`n
-		PathList = %PathList%%A_LoopFileDir%`n
-	  FileList = %FileList%%A_LoopFileName%`n
+		Counter := Counter+1
 		If IgnoreSelf=1
 		{
 			If A_LoopFileDir = %A_ScriptDir%\includes ; ignore own script
@@ -69,23 +64,15 @@ ShowWindow:
 				continue
 			If A_LoopFileLongPath = %A_ScriptFullPath%
 				continue		
-		}				
+		}		
+
+		LongFileList = %LongFileList%%A_LoopFileLongPath%`n
+		PathList = %PathList%%A_LoopFileDir%`n
+	  FileList = %FileList%%A_LoopFileName%`n
+		
 		FolderLen := StrLen(ScanFolder)+2
 		EntryTitle := SubStr(A_LoopFileLongPath, FolderLen)
 
-		%Counter%active=0		
-		DisplayCheckbox = 
-		Loop,%ls%
-		{
-			RunningScript := Regexreplace(Wingettitle("ahk_id " ls%a_index%),".*\\(.*)-.*","$1")
-			StringTrimRight, RunningScript, RunningScript, 1
-			File := GetValue(FileList,Counter)
-			If File = %RunningScript%
-			{
-				DisplayCheckbox = Check
-				%Counter%active=1
-			}
-		}
 		FileReadLine, line, %A_LoopFileLongPath%, 1
 		if ErrorLevel
 				break
@@ -93,29 +80,51 @@ ShowWindow:
 			synopsis := Substr(line,2)
 		else
 			synopsis =
-
-		LV_Add(DisplayCheckbox, EntryTitle,synopsis)
+		%Counter%active=0
+		LV_Add("", EntryTitle,synopsis)
 	}
+
+	winget,ls,list,AutoHotkey ahk_class AutoHotkey
+	counter=0
+	Loop,%ls%
+	{
+		counter := counter + 1
+		RunningScript := Regexreplace(Wingettitle("ahk_id " ls%a_index%),".*\\(.*)-.*","$1")
+		runningscript = %RunningScript%
+		MyIndex := GetIndex(FileList,RunningScript)
+		If MyIndex > 0
+		{
+			%MyIndex%active=1
+			myfile := GetValue(FileList,MyIndex)
+			LV_Modify(MyIndex,"Check")
+		}
+	}
+	
+	
+	
+	
 	LV_ModifyCol()  ; Auto-size each column to fit its contents.
-	EnableCheckboxEvents=1
 	GuiControl, +Redraw, MyListView
 	
 	Gui, Add, Button, Section xs vRescan, &Rescan
 	Gui, Add, Button, ys vChangeFolder, &Change Folder
 	Gui, Add, Button, ys Default vHide, &Hide
 	 
-	Menu, FileMenu, Add, &Open `tCtrl+O, ButtonChangeFolder  ; See remarks below about Ctrl+O.
+	Menu, FileMenu, Add, &Open `tCtrl+O, ButtonChangeFolder 
 	Menu, FileMenu, Add, E&xit `tAlt-F4, MenuExit
 	Menu, HelpMenu, Add, &About Axem `tF1, MenuAbout
 	Menu, HelpMenu, Add, &Support, MenuOnline
 	Menu, HelpMenu, Add, &Homepage, MenuHomepage
-	Menu, ViewMenu, Add, &Reload   `tCtrl+R, ButtonRescan  ; See remarks below about Ctrl+O.
-	Menu, MyMenuBar, Add, &File, :FileMenu  ; Attach the two sub-menus that were created above.
+	Menu, ViewMenu, Add, &Reload   `tCtrl+R, ButtonRescan 
+	Menu, MyMenuBar, Add, &File, :FileMenu 
 	Menu, MyMenuBar, Add, &View, :ViewMenu
 	Menu, MyMenuBar, Add, &Help, :HelpMenu
 	Gui, Menu, MyMenuBar
-	 
-	Gui, Show,W760 H440 Center,Axem - AutoHotKey Scripts Manager
+	Gui, Show,W760 H440 Center,%AppTitle%
+	EnableCheckboxEvents =1
+
+	;store appid
+	GroupAdd, AppId,%AppTitle%
 return
 
 GuiSize: 
@@ -124,6 +133,7 @@ if A_EventInfo = 1  ; The window has been minimized.  No action needed.
 	GoSub, ButtonHide
   return
 }
+; fix controls correctly when resizing
 Anchor("MyListView", "wh")
 Anchor("Rescan", "y",true)
 Anchor("ChangeFolder", "y",true)
@@ -141,7 +151,8 @@ MenuAbout:
 run, readme.txt
 return
 
-#IfWinActive
+
+#IfWinActive, ahk_group AppId
 F1::
 MenuOnline:
 	SupportUrl = http://www.donationcoder.com/Forums/bb/index.php?topic=15482.0
@@ -150,56 +161,57 @@ MenuOnline:
     Run, %supporturl%
 return
 
-#IfWinActive
+#IfWinActive, ahk_group AppId
 !F4::
 MenuExit:
-GoSub, WRITEINI
+	GoSub, WRITEINI
 ExitApp
 return
 
 MyListView:
-if EnableCheckboxEvents = 1
+if EnableCheckboxEvents <> 1
+	return
+	
+if A_GuiEvent = DoubleClick
 {
-	if A_GuiEvent = DoubleClick
-	{
-	    LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
-			If %A_EventInfo%active=1
-			{
-				LV_Modify(A_EventInfo,"-Check")
-				%A_EventInfo%active=0
-				GoSub, StartStopScript
-				}
-			Else
-			{
-				%A_EventInfo%active=1
-				LV_Modify(A_EventInfo, "Check")  ; Uncheck all the checkboxes.
-				GoSub, StartStopScript
-			}
-	} 
-	else if A_GuiEvent = RightClick
-	{
-	    LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
-			LastRightClicked := A_EventInfo
-	    Menu,Options,Show
-	} 
-	else if A_GuiEvent = I
-	{
-		If InStr(ErrorLevel, "C", true) OR InStr(ErrorLevel, "c", true)
+		LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
+		If %A_EventInfo%active=1
 		{
-			LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
-			If %A_EventInfo%active=1
-			{
-				%A_EventInfo%active=0
-				GoSub, StartStopScript
+			LV_Modify(A_EventInfo,"-Check")
+			%A_EventInfo%active=0
+			GoSub, StopScript
 			}
-			Else
-			{
-				%A_EventInfo%active=1
-				GoSub, StartStopScript
-			}
+		Else
+		{
+			%A_EventInfo%active=1
+			LV_Modify(A_EventInfo, "Check")  ; Uncheck all the checkboxes.
+			GoSub, StartScript
 		}
-	} 
-}
+} 
+else if A_GuiEvent = RightClick
+{
+		LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
+		LastRightClicked := A_EventInfo
+		Menu,Options,Show
+} 
+else if A_GuiEvent = I
+{
+	If InStr(ErrorLevel, "C", true) OR InStr(ErrorLevel, "c", true)
+	{
+		LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
+		status := %A_EventInfo%active
+		If status=1
+		{
+			%A_EventInfo%active=0
+			GoSub, StopScript
+		}
+		Else
+		{
+			%A_EventInfo%active=1
+			GoSub, StartScript
+		}
+	}
+} 
 return
 
 EditFile:
@@ -228,9 +240,7 @@ CompileFiles:
 	; default publish folder
 	CompileFolder = %Path%
 	
-	; get ahk file
-	; change to exe
-	; find exe
+	; find compiled version as scriptname.exe
 	; use that as path
 	
 	CompiledFile := SubStr(ShortFile,1,-3) "exe"
@@ -269,18 +279,20 @@ return
 
 
 
-StartStopScript:
+StartScript:
 	myindex := A_EventInfo
 	LongFile := GetValue(LongFileList,myindex)
 	File := GetValue(FileList,myindex)
 	GuiControlGet, Status,,Checkbox%myindex%
-	If %A_EventInfo%active <> 0
-	{
-		;start
-		run, %LongFile%
-	}
-	else
-		WinClose %File% - AutoHotkey  ; Update this to reflect the script's name (case sensitive).
+	run, %LongFile%
+return
+
+StopScript:
+	myindex := A_EventInfo
+	LongFile := GetValue(LongFileList,myindex)
+	File := GetValue(FileList,myindex)
+	GuiControlGet, Status,,Checkbox%myindex%
+	WinClose %File% - AutoHotkey
 return
 
 
@@ -289,7 +301,7 @@ ButtonHide:
 	WinHide
 return
 
-#IfWinActive
+#IfWinActive, ahk_group AppId
 ^o::
 ButtonChangeFolder:
 	Gui +OwnDialogs  ; Force the user to dismiss the FileSelectFile dialog before returning to the main window.
@@ -305,8 +317,8 @@ ButtonChangeFolder:
 	Gosub, ButtonRescan
 return
 
-#IfWinActive
-^r::
+#IfWinActive, ahk_group AppId
+F5::
 ButtonRescan:
 LongFileList =
 FileList = 
@@ -339,6 +351,16 @@ GetValue(var,index)
 	Loop, parse, var, `n
 		If A_Index = %index%
 			return %A_LoopField%
+}
+
+GetIndex(var,str)
+{
+	Loop, parse, var, `n
+	{
+		If A_Loopfield= %str%
+			return %a_index%
+	}
+	return 0
 }
 
 Wait:
