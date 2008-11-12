@@ -1,6 +1,7 @@
 ; Axem (AutoHotkey Script Manager)
 ; Language:       English
 #NoEnv
+#SingleInstance
 DetectHiddenWindows On  ; Allows a script's hidden main window to be detected.	
 SetTitleMatchMode, 2  ; Avoids the need to specify the full path of the file below.
 SendMode Input
@@ -32,13 +33,20 @@ Menu, tray, Add, Show Axem,ButtonRescan
 Menu, tray, Add,
 Menu, tray, Standard
 Menu, tray, Default, Show Axem
+Menu,Options,Add,Edit,EditFile
+Menu,Options,Add,Explore...,ShowFolder
+Menu,Options,Add,
+Menu,Options,Add,Compile,CompileFiles
+Menu,Options,Add,Publish,PublishFiles
+Menu,Options,Add,Compile && Publish,CompileAndPublish
+
 Gosub,READINI
 GoSub, ShowWindow
 GoSub, Wait
 
-
 ShowWindow:
 	Gui Destroy
+	msgbox, boo
 	EnableCheckboxEvents=0
 	Gui, +Resize
 	Gui, Add, Text,, Scripts found in %ScanFolder%:
@@ -107,7 +115,6 @@ ShowWindow:
 	Menu, MyMenuBar, Add, &Help, :HelpMenu
 	Gui, Menu, MyMenuBar
 	 
-	 
 	Gui, Show,W760 H440 Center,Axem - AutoHotKey Scripts Manager
 return
 
@@ -151,41 +158,35 @@ ExitApp
 return
 
 MyListView:
-if A_GuiEvent = DoubleClick
+if EnableCheckboxEvents = 1
 {
-    LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
-		If %A_EventInfo%active=1
-		{
-			LV_Modify(A_EventInfo,"-Check")
-			%A_EventInfo%active=0
-			GoSub, StartStopScript
+	if A_GuiEvent = DoubleClick
+	{
+	    LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
+			If %A_EventInfo%active=1
+			{
+				LV_Modify(A_EventInfo,"-Check")
+				%A_EventInfo%active=0
+				GoSub, StartStopScript
+				}
+			Else
+			{
+				%A_EventInfo%active=1
+				LV_Modify(A_EventInfo, "Check")  ; Uncheck all the checkboxes.
+				GoSub, StartStopScript
 			}
-		Else
-		{
-			%A_EventInfo%active=1
-			LV_Modify(A_EventInfo, "Check")  ; Uncheck all the checkboxes.
-			GoSub, StartStopScript
-		}
-} 
-else if A_GuiEvent = RightClick
-{
-    LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
-		LastRightClicked := A_EventInfo
-		Menu,Options,Add,Edit,EditFile
-		Menu,Options,Add,Explore...,ShowFolder
-		Menu,Options,Add,
-		Menu,Options,Add,Compile,CompileFiles
-		Menu,Options,Add,Publish,PublishFiles
-		Menu,Options,Add,Compile && Publish,CompileAndPublish
-    Menu,Options,Show, %A_GuiX%, %A_GuiY%	
-} 
-else if A_GuiEvent = I
-{
-	If EnableCheckboxEvents=1 
+	} 
+	else if A_GuiEvent = RightClick
+	{
+	    LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
+			LastRightClicked := A_EventInfo
+	    Menu,Options,Show
+	} 
+	else if A_GuiEvent = I
 	{
 		If InStr(ErrorLevel, "C", true) OR InStr(ErrorLevel, "c", true)
 		{
-	    LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
+			LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
 			If %A_EventInfo%active=1
 			{
 				%A_EventInfo%active=0
@@ -197,8 +198,8 @@ else if A_GuiEvent = I
 				GoSub, StartStopScript
 			}
 		}
-	}
-} 
+	} 
+}
 return
 
 EditFile:
