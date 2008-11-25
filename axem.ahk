@@ -115,6 +115,8 @@ ShowWindow:
 	Menu, HelpMenu, Add, &About Axem `tF1, MenuAbout
 	Menu, HelpMenu, Add, &Support, MenuOnline
 	Menu, HelpMenu, Add, &Homepage, MenuHomepage
+	Menu, HelpMenu, Add,
+	Menu, HelpMenu, Add, &Check for Updates, CheckForUpdates	
 	Menu, ViewMenu, Add, &Reload   `tCtrl+R, ButtonRescan 
 	Menu, MyMenuBar, Add, &File, :FileMenu 
 	Menu, MyMenuBar, Add, &View, :ViewMenu
@@ -325,6 +327,10 @@ FileList =
 
 GoSub, ShowWindow
 GoSub, Wait
+return
+
+CheckForUpdates:
+Run, dcuhelper.exe -ri "%AppTitle%" .. "Attention",%A_ScriptDir%\dcuhelper
 return
 
 
