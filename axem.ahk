@@ -42,6 +42,7 @@ Menu,Options,Add,Compile && Publish,CompileAndPublish
 
 Gosub,READINI
 GoSub, ShowWindow
+GoSub, RunStartup
 GoSub, Wait
 
 ShowWindow:
@@ -342,6 +343,18 @@ READINI:
 	IniRead, NewIgnoreSelf, %IniFile%,General, IgnoreSelf
 	If NewIgnoreSelf=0
 		IgnoreSelf=0
+		
+	;--- StartupScripts ---
+	StartupScriptsCount = 0
+	;loop through ini and read in scripts 
+	Loop 
+	{
+		StartupScriptsCount += 1
+		IniRead, StartupScripts%StartupScriptsCount%, %IniFile%, Startup, %A_Index%, -1
+		If StartupScripts%StartupScriptsCount% = -1
+			break
+	}	
+		
 return
 
 WRITEINI:
@@ -349,6 +362,25 @@ WRITEINI:
 	if ScanFolder=
 		Gosub, ButtonChangeFolder
 	IniWrite, %ScanFolder%, %IniFile%, General, ScanFolder
+	
+	;--- StartupScripts ---
+	IniDelete, %IniFile%, Startup	;clear section to rewrite
+	;--- create array with script text of all checked scripts ---
+	StartupScriptsCount = 0
+	Loop {
+		RowNumber := LV_GetNext(RowNumber, "Checked")  ; Resume the search at the row after that found by the previous iteration.
+		if not RowNumber  ; The above returned zero, so there are no more selected rows.
+			break
+		LV_GetText(Text, RowNumber)
+		StartupScriptsCount += 1
+		StartupScripts%StartupScriptsCount% = %Text%
+	}
+	;--- loop through scripts and write list to ini file ---
+	Loop %StartupScriptsCount% {
+		scriptText = % StartupScripts%A_Index%
+		IniWrite, %scriptText%, %IniFile%, Startup, %A_Index%		
+	}	
+
 return
 
 
@@ -368,5 +400,23 @@ GetIndex(var,str)
 	}
 	return 0
 }
+
+RunStartup:
+	;--- StartupScripts ---
+	;--- loops through the array and starts scripts if they are found ---
+	Loop %StartupScriptsCount% {
+		scriptText = % StartupScripts%A_Index%
+		; --- search through list to find matches ---
+		Loop % LV_GetCount() 
+		{
+			LV_GetText(RetrievedText, A_Index)
+			If InStr(RetrievedText, scriptText) 
+			{
+				LV_Modify(A_Index, "Check")  ; Check each row whose first field contains the filter-text.
+			}
+		}
+	}
+return
+
 
 Wait:
