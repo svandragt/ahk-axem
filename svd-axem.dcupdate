@@ -5,7 +5,7 @@
        <IconFile>Axem.exe</IconFile>
        <!-- version info of locally installed current version, and simple remote version file -->
        <Version>1.50</Version>
-     <VersionFileRemote>http://trac2.assembla.com/svd-autohotkey/browser/trunk/Axem/online/versioninfo.xml?format=raw</VersionFileRemote>
+     <VersionFileRemotehttps://bitbucket.org/svandragt/axem/raw/c06508ff7ab7/svd-axem.dcupdate</VersionFileRemote>
        <WebPage>http://justice.dcmembers.com</WebPage>
       <!-- ok how to conduct updates; could be: "run" (download and run program), or "visit" (visit website), or "unzip" (download zip and unpack over files) -->
        <UpdateMethod>unzip</UpdateMethod>
